@@ -33,10 +33,10 @@ export default function Selectclass(props) {
               <MenuItem value="Facebook">
                 <em>None</em>
               </MenuItem>
-              <MenuItem value={"Facebo"}>Facebook</MenuItem>
-              <MenuItem value={"IT"}>Instagram</MenuItem>
-              <MenuItem value={"ECE"}>Twitter</MenuItem>
-              <MenuItem value={"EE"}>Youtube</MenuItem>
+              <MenuItem value={"facebook"}>Facebook</MenuItem>
+              <MenuItem value={"instagram"}>Instagram</MenuItem>
+              <MenuItem value={"twitter"}>Twitter</MenuItem>
+              <MenuItem value={"youtube"}>Youtube</MenuItem>
             </Select>
           </FormControl>
           <FormControl variant="standard" sx={{ m: 1, minWidth: 120 }}>
@@ -49,7 +49,7 @@ export default function Selectclass(props) {
               label="Parsing"
             >
               <MenuItem value={"url"}>Parse a url</MenuItem>
-              <MenuItem value={"single"}>Parse a single post url</MenuItem>
+              <MenuItem value={"profile"}>Parse a profile</MenuItem>
               <MenuItem value={"post"}>Write a post</MenuItem>
             </Select>
           </FormControl>

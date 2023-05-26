@@ -62,7 +62,7 @@ const Copyright = (props) => {
             </li>
           </ul>
           <div className="footer-copyright">
-            &copy; Project ProtoType
+            &copy; Social Media Emotion Analyzer
           </div>
         </div>
       </div>

@@ -28,7 +28,7 @@ const columnChartOptions = {
         colors: ['transparent']
     },
     xaxis: {
-        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     },
     yaxis: {
         title: {
@@ -78,7 +78,7 @@ const columnChartOptions = {
 };
 
 
-const DatewiseChart = () => {
+const DatewiseChart = (props) => {
     const theme = useTheme();
 
     const { primary, secondary } = theme.palette.text;
@@ -91,14 +91,14 @@ const DatewiseChart = () => {
     const [series] = useState([
         {
             name: 'Positive Emotion Score',
-            data: [20, 90, 20, 14, 12, 45]
+            data: props.positiveMonths
         },
         {
             name: 'negative Emotion Score',
-            data: [20, 45, 78, 50, 8, 19]
+            data: props.negativeMonths
         }
     ]);
-
+    console.log("props" , props.positiveMonths)
     const [options, setOptions] = useState(columnChartOptions);
 
     useEffect(() => {
@@ -108,7 +108,7 @@ const DatewiseChart = () => {
             xaxis: {
                 labels: {
                     style: {
-                        colors: [secondary, secondary, secondary, secondary, secondary, secondary]
+                        colors: [secondary, secondary, secondary, secondary, secondary, secondary, secondary, secondary, secondary, secondary, secondary, secondary]
                     }
                 }
             },

@@ -26,9 +26,38 @@ export default function SignUp() {
     const inputs = {
       email: data.get("email"),
       password: data.get("password"),
+      firstName: data.get("firstName"),
+      lastName: data.get("lastName"),
     };
-    dispatch({ type: allActionTypes.SETUSER, action: inputs });
-    navigate("/");
+    console.log(data.get("email"),data.get("password"),data.get("firstName"),data.get("lastName"))
+    
+    const requestBody = {
+      "firstName" : data.get("firstName"),
+      "lastName"  : data.get("lastName"),
+      "email"     : data.get("email"),
+      "password"  : data.get("password"),
+    };
+
+    const options = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(requestBody)
+    };
+
+    fetch("https://nodejs-production-314a.up.railway.app/register",options)
+    .then(response => response.json())
+    .then(data => {
+      console.log(data);
+      dispatch({ type: allActionTypes.SETUSER, action: inputs });
+      navigate("/");
+    })
+    .catch(error => {
+      console.error("Error:", error);
+    });
+
+    
   };
 
   if (user) {

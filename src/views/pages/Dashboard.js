@@ -25,12 +25,55 @@ import { flexbox } from "@mui/system";
 
 
 const Dashboard = () => {
-  const [dept, setdept] = useState("");
-  const [sec, setsec] = useState("");
+  const [platform, setPlatform] = useState("");
+  const [type, setType] = useState("");
   const [submitted, setsubmitted] = useState(false)
   const [data, setdata] = useState(events.CSEA);
   const [{ user }] = useContextValue();
   const [currPost, setcurrPost] = useState("");
+  const [fileLink, setFileLink] = useState("");
+  const [emotion,setEmotion] = useState("");
+  const [imageArr,setImageArr] = useState([])
+  const [profileArr,setProfileArr] = useState([])
+  const [emotions, setEmotions] = useState({ joy: 0, fear: 0, sadness: 0, neutral : 0, anger : 0 });
+  const [positiveNegative,setPositiveNegative] = useState({ positive:0, negative: 0})
+  const [positiveMonths, setPositiveMonths] = useState(Array(12).fill(0));
+  const [negativeMonths, setNegativeMonths] = useState(Array(12).fill(0));
+  const [chart,openChart] = useState(false)
+  const [apiCallDone,setapiCallDone] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
+  const [warning,setWarning] = useState(false)
+
+  const updatePositiveMonth = (index) => {
+    setPositiveMonths((prevMonths) => {
+      const newMonths = [...prevMonths];
+      newMonths[index] = newMonths[index] + 1;
+      console.log("positive",index, newMonths)
+      return newMonths;
+    });
+  };
+
+  const updateNegativeMonth = (index) => {
+    setNegativeMonths((prevMonths) => {
+      const newMonths = [...prevMonths];
+      newMonths[index] = newMonths[index] + 1;
+      console.log("positiveNegative",index, newMonths)
+      return newMonths;
+    });
+  };
+
+  const updateEmotion = (emotion) => {
+    setEmotions((prevEmotions) => ({
+      ...prevEmotions,
+      [emotion]: prevEmotions[emotion] + 1,
+    }));
+  };
+  const updatePositiveNegative = (emotion) => {
+    setPositiveNegative((prevEmotions) => ({
+      ...prevEmotions,
+      [emotion]: prevEmotions[emotion] + 1,
+    }));
+  };
 
   useEffect(() => {
     const notify = () => {
@@ -45,19 +88,170 @@ const Dashboard = () => {
     notify();
   }, [user]);
 
+  useEffect(()=>{
+    setsubmitted(false)
+    setcurrPost("")
+    setFileLink("")
+    setEmotion("")
+    setImageArr([])
+    setProfileArr([])
+    setEmotions({ joy: 0, fear: 0, sadness: 0, neutral : 0, anger : 0 })
+    setPositiveNegative({ positive:0, negative: 0})
+    setPositiveMonths(Array(12).fill(0))
+    setNegativeMonths(Array(12).fill(0))
+    setapiCallDone(false)
+    setIsLoading(false)
+    setWarning(false)
+  },[type])
+
   // const notify = <p></p>;
   const handleDeptChange = (event) => {
-    setdept(event.target.value);
-    const val = dept + sec;
-    console.log(event.val);
+    setPlatform(event.target.value);
+    const val = platform + type;
+    console.log(event.target.value);
     setdata(events[val]);
   };
   const handleSecChange = (event) => {
-    setsec(event.target.value);
-    const val = dept + sec;
+    setType(event.target.value);
+    const val = platform + type;
+    console.log(event.target.value);
     setdata(events[val]);
   };
 
+  function callImageApi(image) {
+    const requestBody2 = {
+      "data": [
+        image 
+      ]
+    };
+
+    const options = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(requestBody2)
+    };
+
+    fetch("https://devraj4522-sentiment-image.hf.space/run/predict",options)
+    .then(response => response.json())
+    .then(data => {
+      console.log(data);
+      const arr = data.data[0].analysis
+      const newArr = []
+      for (let i=0;i<arr.length;i++){
+        newArr.push(arr[i].emotions)
+      }
+      setImageArr(newArr)
+      console.log(newArr)
+    })
+    .catch(error => {
+      console.error("Error:", error);
+    });
+  }
+
+  function callTextApi(data, month) {
+    const requestBody = {
+      "data": [
+        data 
+      ]
+    };
+
+    const options = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(requestBody)
+    };
+
+    fetch("https://devraj4522-sentiment.hf.space/run/predict",options)
+    .then(response => response.json())
+    .then(data => {
+      console.log(data);
+      setEmotion(data.data[0].prediction)
+      if (type == "profile"){
+        updateEmotion(data.data[0].prediction)
+        if (month != "NaN"){
+          if (data.data[0].prediction == "joy" || data.data[0].prediction == "neutral") {
+              
+              updatePositiveMonth(month)
+              console.log("positive",month, positiveMonths)
+          }else{
+              
+              updateNegativeMonth(month)
+              console.log("positivenegative",month, negativeMonths)
+          }
+        }
+      }
+      setsubmitted(true);
+    })
+    .catch(error => {
+      console.error("Error:", error);
+    });
+  }
+
+  function handleButtonClick() {
+    if (type == "url") {
+      setIsLoading(true)
+      const tweet_id = currPost.match(/\d+$/)[0];
+
+      fetch(`https://flask-production-283a.up.railway.app/fetch_tweets_from_id?tweet_id=${tweet_id}`)
+      .then(response => response.json())
+      .then(data => {
+        setWarning(false)
+        console.log(data);
+        setsubmitted(true);
+        const msg = data[0].text
+        const image = data[0].media[0].media_url.fullUrl
+        callImageApi(image)
+        callTextApi(msg ,0)
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        setWarning(true)
+      });
+      setIsLoading(false)
+    }else if (type == "profile"){
+
+
+      setIsLoading(true)
+      const user=currPost
+
+      fetch(`https://flask-production-283a.up.railway.app/fetch_user_tweets?user=${user}`)
+      .then(response => response.json())
+      .then(data => {
+        setWarning(false)
+        console.log(data);
+        setsubmitted(true);
+        const arr = []
+        for(let i=0;i<data.length;i++){
+          const dateObj = new Date(data[i].date);
+          const month = dateObj.getMonth();
+          callTextApi(data[i].text, month)
+          // let _ = data[i].media.length>0 ? callImageApi(data[i].media[0].media_url.fullUrl) : null
+          const obj = {
+            month : month,
+            text  : data[i].text,
+            media : data[i].media.length>0 ? data[i].media[0].media_url.fullUrl : null
+          };
+          arr.push(obj);
+        }
+        setProfileArr(arr)
+        setapiCallDone(true)
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        setWarning(true)
+      });
+      setIsLoading(false)
+    } else {
+      setIsLoading(true)
+      callTextApi(currPost)
+      callImageApi(fileLink)
+      setIsLoading(false)
+    }
+  }
   if (!user) {
     return <Navigate to="/login/" replace={true} state={user} />;
   }
@@ -78,45 +272,11 @@ const Dashboard = () => {
         }}
       >
 
-        {/* <Timetable
-          events={data}
-          hoursInterval={{ from: 9, to: 17 }}
-          renderHour={({ hour, defaultAttributes, classNames }) => {
-            return (
-              <div {...defaultAttributes} key={hour}>
-                <span className={classNames.event_info}>{hour}</span>
-              </div>
-            );
-          }}
-          renderEvent={({ event, defaultAttributes, classNames }) => {
-            return (
-              <div
-                style={{
-                  height: defaultAttributes.style.height,
-                  marginTop: defaultAttributes.style.marginTop,
-                  background: "#0F8AFD",
-                  borderRight: "2px solid white",
-                }}
-                className={defaultAttributes.className}
-                title={event.name}
-                key={event.id}
-              >
-                <span className={classNames.event_info}>{event.name}</span>
-                <span className={classNames.event_info}>
-                  {event.startTime.getHours() +
-                    ":" +
-                    event.startTime.getMinutes()}{" "}
-                  -{" "}
-                  {event.endTime.getHours() + ":" + event.endTime.getMinutes()}
-                </span>
-              </div>
-            );
-          }}
-        /> */}
+    
       </Paper>
       <Selectclass
-        dept={dept}
-        sec={sec}
+        platform={platform}
+        type={type}
         onDeptSet={handleDeptChange}
         onSecSet={handleSecChange}
       />
@@ -126,16 +286,24 @@ const Dashboard = () => {
         <Box component="div" noValidate sx={{ mt: 1 }}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              {(sec == 'url' || sec == 'single') && <TextField
+              {(type == 'url') && <TextField
                 required
                 fullWidth
                 id="url"
                 label="Enter a Url"
                 name="url"
-
+                onChange={(e) => setcurrPost(e.target.value)}
+              />}
+              {(type == 'profile') && <TextField
+                required
+                fullWidth
+                id="url"
+                label="Enter User Id"
+                name="url"
+                onChange={(e) => setcurrPost(e.target.value)}
               />}
 
-              {sec == 'post' && <TextField
+              {type == 'post' && <TextField
                 required
                 fullWidth
                 multiline
@@ -147,66 +315,57 @@ const Dashboard = () => {
               />}
             </Grid>
             <Grid item xs={12}>
-              {sec == 'post' && <TextField
+              {type == 'post' && <TextField
                 required
                 fullWidth
                 id="file"
-                label=""
-                name=""
-                type='file'
+                label="Enter Image link"
+                name="link"
+                onChange={(e)=>setFileLink(e.target.value)}
               />}
             </Grid>
 
             <Grid item xs={12}>
-              {sec && <Button type="submit" fullWidth variant="contained" onClick={() => setsubmitted(true)}>
+              {type && <Button type="submit" fullWidth variant="contained" onClick={() => handleButtonClick()}>
                 Submit
               </Button>}
             </Grid>
           </Grid>
         </Box>
-
+        {/* {warning && (
+              <Alert severity="error" sx={{mt:10, width: "max-content", marginLeft: 10 }}>
+                Please enter a valid input .
+              </Alert>
+            )} */}
       </Container>
-      {submitted && (sec == "url" || sec == "single") && <div className="container">
+      
+      {submitted && (type == "profile") && <div className="container">
 
-        <Typography sx={{ fontSize: 30, mt: 20 }} color="text.secondary" gutterBottom>
-          Total Posts: 25
+        <Typography sx={{ fontSize: 30, mt: 10, marginLeft: 55 }} color="text.secondary" gutterBottom>
+          Total Posts: {profileArr.length}
         </Typography>
       </div>}
       
-      {submitted && (sec == "post") && (currPost != "") && <div className="container" style={{ marginBottom: "3rem", marginLeft: 'auto', marginRight: 'auto' }}>
-      <Typography sx={{ textAlign: "center", fontSize: 30, marginTop: 10 }} color="text.secondary">
+      {submitted && (type == "url" || type == "post") && (currPost != "") && <div className="container" style={{ marginBottom: "3rem", marginLeft: 'auto', marginRight: 'auto' }}>
+      <Typography sx={{ textAlign: "center", fontSize: 30, marginTop: 10, marginBottom:5 }} color="text.secondary">
               <strong>Current Post Emotion</strong>
             </Typography>
 
         <Card sx={{ minWidth: 100, m: 2 }}>
           <CardContent>
             <Typography sx={{ textAlign: "center" , fontSize: 20}} color="text.secondary">
-            😁 Happy   Score - 10
+            {emotion.toUpperCase()}
             </Typography>
           </CardContent>
         </Card>
       </div>
       }
 
-      {submitted && (sec == "single") && <div className="container" style={{ marginBottom: "3rem", marginLeft: 'auto', marginRight: 'auto' }}>
-      <Typography sx={{ textAlign: "center", fontSize: 30 }} color="text.secondary">
-              <strong>Current Post Emotion</strong>
-            </Typography>
-
-        <Card sx={{ minWidth: 100, m: 2 }}>
-          <CardContent>
-            <Typography sx={{ textAlign: "center" , fontSize: 20}} color="text.secondary">
-            😁 Happy   Score - 10
-            </Typography>
-          </CardContent>
-        </Card>
-      </div>
-      }
-      {submitted && (sec == "url" || sec == "single") && <div className="container" style={{ marginBottom: "3rem", display: "flex", flexDirection: "row", marginLeft: 'auto', marginRight: 'auto' }}>
+      {submitted && (type == "profile") && <div className="container" style={{ marginBottom: "3rem", display: "flex", flexDirection: "row", marginLeft: 500, marginRight: 'auto' }}>
         <Card sx={{ minWidth: 100, m: 2 }}>
           <CardContent>
             <Typography sx={{ textAlign: "center" }} color="text.secondary">
-              Happy <br /> 😁 <br /> 10
+              Sadness <br /> 😁 <br /> {emotions.sadness}
             </Typography>
           </CardContent>
         </Card>
@@ -214,22 +373,21 @@ const Dashboard = () => {
         <Card sx={{ minWidth: 100, m: 2 }}>
           <CardContent>
             <Typography sx={{ textAlign: "center" }} color="text.secondary">
-              Sad <br /> 😡 <br /> 2
+              Anger <br /> 😡 <br /> {emotions.anger}
             </Typography>
           </CardContent>
         </Card>
         <Card sx={{ minWidth: 100, m: 2 }}>
           <CardContent>
             <Typography sx={{ textAlign: "center" }} color="text.secondary">
-              Excited <br />🙂 <br />
-              8
+              Joy <br />🙂 <br /> {emotions.joy}
             </Typography>
           </CardContent>
         </Card>
         <Card sx={{ minWidth: 100, m: 2 }}>
           <CardContent>
             <Typography sx={{ textAlign: "center" }} color="text.secondary">
-              Depressed <br /> 😔 <br /> 2
+              Fear <br /> 😔 <br /> {emotions.fear}
             </Typography>
           </CardContent>
         </Card>
@@ -237,24 +395,75 @@ const Dashboard = () => {
         <Card sx={{ minWidth: 100, m: 2 }}>
           <CardContent>
             <Typography sx={{ textAlign: "center" }} color="text.secondary">
-              Neutral <br /> 😐 <br /> 3
+              Neutral <br /> 😐 <br /> {emotions.neutral}
             </Typography>
           </CardContent>
         </Card>
 
       </div>
       }
+
+
+      {submitted && (type == "url" || type == "post") && <div className="container" style={{ marginBottom: "3rem", display: "flex", flexDirection: "column", marginLeft: 'auto', marginRight: 'auto', marginTop: 20 }}>
+      {imageArr.map((element, index) => (
+          <div style={{ marginBottom: "2rem", display: "flex",flexDirection: "column", marginLeft: 'auto', marginRight: 'auto', marginTop: 10 }}>
+          <span style={{ marginLeft: 20 }}>Person {index+1}</span>
+          <div style={{ marginBottom: "2rem", display: "flex", marginRight: 'auto', marginTop: 50 }}>
+          <Card sx={{ minWidth: 100, m: 2 }}>
+            <CardContent>
+              <Typography sx={{ textAlign: "center" }} color="text.secondary">
+                Joy <br /> 😁 <br /> {(element.happy * 100) + "%"}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ minWidth: 100, m: 2 }}>
+            <CardContent>
+              <Typography sx={{ textAlign: "center" }} color="text.secondary">
+                Sadness <br /> 😡 <br /> {(element.sad * 100) + "%"}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ minWidth: 100, m: 2 }}>
+            <CardContent>
+              <Typography sx={{ textAlign: "center" }} color="text.secondary">
+                Anger <br />🙂 <br /> {(element.angry * 100) + "%"}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ minWidth: 100, m: 2 }}>
+            <CardContent>
+              <Typography sx={{ textAlign: "center" }} color="text.secondary">
+                Fear <br /> 😔 <br /> {(element.fear * 100) + "%"}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ minWidth: 100, m: 2 }}>
+            <CardContent>
+              <Typography sx={{ textAlign: "center" }} color="text.secondary">
+                Neutral <br /> 😐 <br /> {(element.neutral * 100) + "%"}
+              </Typography>
+            </CardContent>
+          </Card>
+          </div>
+        </div>
+        ))}
+      </div>
+      }
+      
       <div className="container" style={{ marginBottom: "3rem" }}>
-        {submitted && (sec == "url" || sec == "single") && <DatewiseChart />}
+        {submitted && (type == "profile") ? <DatewiseChart positiveMonths={positiveMonths} negativeMonths={negativeMonths}/> : null}
       </div>
 
       <div className="container" style={{ marginBottom: "3rem" }}>
-        {submitted && (sec == "url" || sec == "single") && <ReportAreaChart />}
+        {submitted && (type == "profile") ? <ReportAreaChart /> : null}
       </div>
-
-
-
-
+      
+      
+    
     </>
   );
 };

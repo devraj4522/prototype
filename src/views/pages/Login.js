@@ -34,13 +34,47 @@ const Login = () => {
       password: data.get("password"),
     };
 
-    if (inputs.email === email && inputs.password === password) {
+    const requestBody = {
+      "email"     : data.get("email"),
+      "password"  : data.get("password"),
+    };
+
+    const options = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(requestBody)
+    };
+
+    fetch("https://nodejs-production-314a.up.railway.app/login",options)
+    .then((response) => {
+      if (response.status === 200) {
+        return response.json();
+      } else if (response.status === 401) {
+        throw new Error("Unauthorized");
+      } else {
+        throw new Error("Unexpected error occurred");
+      }
+    })
+    .then(data => {
+      console.log(data);
       localStorage.setItem("user", JSON.stringify(inputs));
       dispatch({ type: allActionTypes.SETUSER, action: inputs });
       navigate("/dashboard");
-    } else {
+    })
+    .catch(error => {
+      console.error("Error:", error);
       setWarning(true);
-    }
+    });
+
+    // if (inputs.email === email && inputs.password === password) {
+    //   localStorage.setItem("user", JSON.stringify(inputs));
+    //   dispatch({ type: allActionTypes.SETUSER, action: inputs });
+    //   navigate("/dashboard");
+    // } else {
+    //   setWarning(true);
+    // }
   };
 
   if (user) {
@@ -118,9 +152,8 @@ const Login = () => {
               </Grid>
             </Grid>
             {warning && (
-              <Alert severity="error" sx={{ mt: 5 }}>
-                Please Use Email as email@email.com Password as password for
-                Test Account .
+              <Alert severity="error" sx={{ mt: 5 , marginLeft: 7}}>
+                Please enter valid Email Id and Password .
               </Alert>
             )}
           </Grid>
@@ -131,3 +164,5 @@ const Login = () => {
 };
 
 export default Login;
+
+//{"error ":"Invalid Password"}
